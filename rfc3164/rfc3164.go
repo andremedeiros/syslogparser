@@ -2,8 +2,9 @@ package rfc3164
 
 import (
 	"bytes"
-	"github.com/jeromer/syslogparser"
 	"time"
+
+	"github.com/jeromer/syslogparser"
 )
 
 type Parser struct {
@@ -130,6 +131,8 @@ func (p *Parser) parseTimestamp() (time.Time, error) {
 	var sub []byte
 
 	tsFmts := []string{
+		"2006-01-02T15:04:05Z07:00",
+		"2006-01-02T15:04:05Z",
 		"Jan 02 15:04:05",
 		"Jan  2 15:04:05",
 	}
