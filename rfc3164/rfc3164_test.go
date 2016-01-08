@@ -2,10 +2,11 @@ package rfc3164
 
 import (
 	"bytes"
-	"github.com/jeromer/syslogparser"
-	. "launchpad.net/gocheck"
 	"testing"
 	"time"
+
+	"github.com/jeromer/syslogparser"
+	. "launchpad.net/gocheck"
 )
 
 // Hooks up gocheck into the gotest runner.
@@ -23,34 +24,61 @@ var (
 )
 
 func (s *Rfc3164TestSuite) TestParser_Valid(c *C) {
-	buff := []byte("<34>Oct 11 22:14:15 mymachine very.large.syslog.message.tag: 'su root' failed for lonvick on /dev/pts/8")
-
-	p := NewParser(buff)
-	expectedP := &Parser{
-		buff:   buff,
-		cursor: 0,
-		l:      len(buff),
+	fixtures := []string{
+		"<34>Oct 11 22:14:15 mymachine very.large.syslog.message.tag: 'su root' failed for lonvick on /dev/pts/8",
+		"<6>2016-01-08T15:01:52Z Andres-MacBook-Pro.local some-app[26794]: The message goes here",
+		"<6>2016-01-08T15:16:14+01:00 Andres-MacBook-Pro.local some-app[28207]: The message goes here",
 	}
 
-	c.Assert(p, DeepEquals, expectedP)
-
-	err := p.Parse()
-	c.Assert(err, IsNil)
-
-	now := time.Now()
-
-	obtained := p.Dump()
-	expected := syslogparser.LogParts{
-		"timestamp": time.Date(now.Year(), time.October, 11, 22, 14, 15, 0, time.UTC),
-		"hostname":  "mymachine",
-		"tag":       "very.large.syslog.message.tag",
-		"content":   "'su root' failed for lonvick on /dev/pts/8",
-		"priority":  34,
-		"facility":  4,
-		"severity":  2,
+	expected := []syslogparser.LogParts{
+		syslogparser.LogParts{
+			"timestamp": time.Date(time.Now().Year(), time.October, 11, 22, 14, 15, 0, time.UTC),
+			"hostname":  "mymachine",
+			"tag":       "very.large.syslog.message.tag",
+			"content":   "'su root' failed for lonvick on /dev/pts/8",
+			"priority":  34,
+			"facility":  4,
+			"severity":  2,
+		},
+		syslogparser.LogParts{
+			"timestamp": time.Date(2016, 1, 8, 15, 1, 52, 0, time.UTC),
+			"hostname":  "Andres-MacBook-Pro.local",
+			"tag":       "some-app",
+			"content":   "The message goes here",
+			"priority":  6,
+			"severity":  6,
+			"facility":  0,
+		},
+		syslogparser.LogParts{
+			"timestamp": time.Date(2016, 1, 8, 15, 16, 14, 0, time.FixedZone("", 3600)),
+			"hostname":  "Andres-MacBook-Pro.local",
+			"tag":       "some-app",
+			"content":   "The message goes here",
+			"priority":  6,
+			"severity":  6,
+			"facility":  0,
+		},
 	}
 
-	c.Assert(obtained, DeepEquals, expected)
+	for i, buff := range fixtures {
+		expectedP := &Parser{
+			buff:     []byte(buff),
+			cursor:   0,
+			l:        len(buff),
+			location: time.UTC,
+		}
+
+		p := NewParser([]byte(buff))
+		c.Assert(p, DeepEquals, expectedP)
+
+		err := p.Parse()
+		c.Assert(err, IsNil)
+
+		obtained := p.Dump()
+		for k, v := range obtained {
+			c.Assert(v, DeepEquals, expected[i][k])
+		}
+	}
 }
 
 func (s *Rfc3164TestSuite) TestParseHeader_Valid(c *C) {
